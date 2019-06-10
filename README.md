@@ -18,8 +18,7 @@ The datasets can be downloaded [here](https://drive.google.com/drive/folders/1ty
 
 The steps of running 3D Teapot dataset generator by your own are as follows:
 
-* 
-` git clone https://github.com/polmorenoc/opendr `.
+* ` git clone https://github.com/polmorenoc/opendr `. (Or use my forked version: https://github.com/fjxmlzn/opendr)
 * Copy all files in `3D_teapot` folder in this repo to `opendr` folder.
 * Follow the instructions on [https://github.com/polmorenoc/opendr](https://github.com/polmorenoc/opendr) to install the required library, and download `teapotModel.pkl` to `opendr/data` folder.
 * `cd opendr`. Then you can run:
