@@ -108,3 +108,9 @@ Copy CelebA data files to `data/celeba`.
 python main.py
 ```
 
+## Results
+![Figure1](results/Figure1.png)
+
+![Table1](results/Table1.png)
+
+The detailed explanation of the idea, architectures, hyperparameters, metrics, and experimental settings are given in the paper.
