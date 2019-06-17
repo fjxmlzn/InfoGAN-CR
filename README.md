@@ -1,6 +1,6 @@
 # InfoGAN-CR: Disentangling Generative Adversarial Networks with Contrastive Regularizers
 
-**[[paper (arXiv)]()]**
+**[[paper (arXiv)](https://arxiv.org/abs/1906.06034)]**
 **[[code](https://github.com/fjxmlzn/InfoGAN-CR)]**
 
 
