@@ -201,7 +201,11 @@ class FactorVAE(object):
         if checkpoint_dir is None:
             checkpoint_dir = self.checkpoint_dir
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-        self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+        # In cases where people move the checkpoint directory to another place,
+        # model path indicated by get_checkpoint_state will be wrong. So we
+        # get the model name and then recontruct path using checkpoint_dir
+        ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
+        self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
 
     def _image_list_to_grid(self, image_list, num_row, num_col):
         assert num_row * num_col == image_list.shape[0]
