@@ -108,6 +108,20 @@ Copy CelebA data files to `data/celeba`.
 python main.py
 ```
 
+## Pre-trained models
+### InfoGAN-CR, CelebA
+```
+cd InfoGAN-CR_CelebA
+```
+Copy CelebA data files to `data/celeba`.
+
+Create a sub-folder `results`, download the [pretrained model](https://drive.google.com/file/d/1-g6C-uug36rg0gZi1ESI6G2YuOC4H7l3/view?usp=sharing), and decompress it into `results` sub-folder.
+
+```
+python main_generate_latent_trans.py
+```
+This code will generate latent traversal images in `results/cr_coe_increase-1.0,cr_coe_increase_batch-80000,cr_coe_increase_times-1,cr_coe_start-0.0,gap_decrease-0.0,gap_decrease_batch-1,gap_decrease_times-0,gap_start-0.0,info_coe_de-2.0,info_coe_infod-2.0,run-0,/latent_trans/`.
+
 ## Results
 ![Figure1](results/Figure1.png)
 
