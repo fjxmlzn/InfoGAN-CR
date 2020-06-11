@@ -15,7 +15,9 @@ def load_dSprites(path):
 
     imgs = imgs.reshape(737280, 64, 64, 1).astype(np.float)  # 0 ~ 1
 
-    latents_sizes = metadata['latents_sizes']
+    latents_names = metadata["latents_names"]
+    latents_sizes = metadata["latents_sizes"]
+    latents_possible_values = metadata["latents_possible_values"]
     latents_bases = np.concatenate(
         (latents_sizes[::-1].cumprod()[::-1][1:], np.array([1, ])))
 
@@ -48,9 +50,34 @@ def load_dSprites(path):
     selected_ids = selected_ids[0: imgs.shape[0] / 10]
     metric_data_eval_std = imgs[selected_ids]
 
+    random_latent_ids = sample_latent(size=imgs.shape[0] / 10)
+    random_latent_ids = random_latent_ids.astype(np.int32)
+    random_ids = latent_to_index(random_latent_ids)
+    assert random_latent_ids.shape == (imgs.shape[0] / 10, 6)
+    random_imgs = imgs[random_ids]
+
+    random_latents = np.zeros((random_imgs.shape[0], 6))
+    for i in range(6):
+        random_latents[:, i] = \
+            latents_possible_values[latents_names[i]][random_latent_ids[:, i]]
+
+    assert np.all(random_latents[:, 0] == 1)
+    assert np.min(random_latents[:, 1]) == 1
+    assert np.max(random_latents[:, 1]) == 3
+
+    random_latents = random_latents[:, 1:]
+    random_latents[:, 0] -= 1.0
+
+    metric_data_img_with_latent = {
+        "img": random_imgs,
+        "latent": random_latents,
+        "latent_id": random_latent_ids[:, 1:],
+        "is_continuous": [False, True, True, True, True]}
+
     metric_data = {
         "groups": metric_data_groups,
-        "img_eval_std": metric_data_eval_std}
+        "img_eval_std": metric_data_eval_std,
+        "img_with_latent": metric_data_img_with_latent}
 
     return imgs, metric_data, latent_values, metadata
 

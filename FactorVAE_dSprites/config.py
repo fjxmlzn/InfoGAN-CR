@@ -20,7 +20,7 @@ config = {
         {
             "run": range(10),
             "gaussian_dim": [10],
-            "tc_coe": [40.0]
+            "tc_coe": [1.0, 10.0, 20.0, 40.0]
         }
     ]
 }

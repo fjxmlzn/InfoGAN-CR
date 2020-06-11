@@ -2,12 +2,13 @@ config = {
     "scheduler_config": {
         "gpu": ["0", "1", "2", "3"],
         "temp_folder": "temp",
-        "scheduler_log_file_path": "scheduler.log",
-        "log_file": "worker.log"
+        "scheduler_log_file_path": "scheduler_final_metrics.log",
+        "log_file": "worker_final_metrics.log",
+        "force_rerun": True
     },
 
     "global_config": {
-        "epoch": 35,
+        "epoch": 27,
         "batch_size": 64,
         "vis_freq": 200,
         "vis_num_sample": 10,

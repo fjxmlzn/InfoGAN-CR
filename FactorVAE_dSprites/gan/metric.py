@@ -5,6 +5,12 @@ from tqdm import tqdm
 import math
 from collections import Counter
 import scipy.stats
+from sklearn.linear_model import LogisticRegression, Lasso, LassoCV
+from sklearn.svm import LinearSVC
+from sklearn.metrics import mutual_info_score, roc_auc_score
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.ensemble.forest import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
 
 
 class Metric(object):
@@ -245,6 +251,9 @@ class DHSICMetric(Metric):
 
 
 class FactorVAEMetric(Metric):
+    """ Impementation of the metric in: 
+        Disentangling by Factorising
+    """
     def __init__(self, metric_data, *args, **kwargs):
         super(FactorVAEMetric, self).__init__(*args, **kwargs)
         self.metric_data = metric_data
@@ -277,3 +286,347 @@ class FactorVAEMetric(Metric):
                 "factorVAE_metric_revised": (float(correct_sample_revised) /
                                              total_sample),
                 "factorVAE_metric_detail": train_data}
+
+
+class BetaVAEMetric(Metric):
+    """ Impementation of the metric in: 
+        beta-VAE: Learning Basic Visual Concepts with a Constrained Variational 
+        Framework
+    """
+    def __init__(self, metric_data, *args, **kwargs):
+        super(BetaVAEMetric, self).__init__(*args, **kwargs)
+        self.metric_data = metric_data
+
+    def evaluate(self, epoch_id, batch_id, global_id):
+        features = []
+        labels = []
+
+        for data in self.metric_data["groups"]:
+            data_inference = self.model.inference_from(data["img"])
+            data_diff = np.abs(data_inference[0::2] - data_inference[1::2])
+            data_diff_mean = np.mean(data_diff, axis=0)
+            features.append(data_diff_mean)
+            labels.append(data["label"])
+
+        features = np.vstack(features)
+        labels = np.asarray(labels)
+
+        classifier =  LogisticRegression()
+        classifier.fit(features, labels)
+
+        acc = classifier.score(features, labels)
+
+        return {"betaVAE_metric": acc}
+
+
+class SAPMetric(Metric):
+    """ Impementation of the metric in: 
+        VARIATIONAL INFERENCE OF DISENTANGLED LATENT CONCEPTS FROM UNLABELED 
+        OBSERVATIONS
+        Part of the code is adapted from:
+        https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/sap_score.py
+    """
+    def __init__(self, metric_data, *args, **kwargs):
+        super(SAPMetric, self).__init__(*args, **kwargs)
+        self.metric_data = metric_data
+
+    def evaluate(self, epoch_id, batch_id, global_id):
+        data_inference = self.model.inference_from(
+            self.metric_data["img_with_latent"]["img"])
+        data_gt_latents = self.metric_data["img_with_latent"]["latent"]
+        factor_is_continuous = \
+            self.metric_data["img_with_latent"]["is_continuous"]
+
+        num_latents = data_inference.shape[1]
+        num_factors = len(factor_is_continuous)
+
+        score_matrix = np.zeros([num_latents, num_factors])
+        for i in range(num_latents):
+            for j in range(num_factors):
+                inference_values = data_inference[:, i]
+                gt_values = data_gt_latents[:, j]
+                if factor_is_continuous[j]:
+                    cov = np.cov(inference_values, gt_values, ddof=1)
+                    assert np.all(np.asarray(list(cov.shape)) == 2)
+                    cov_cov = cov[0, 1]**2
+                    cov_sigmas_1 = cov[0, 0]
+                    cov_sigmas_2 = cov[1, 1]
+                    score_matrix[i, j] = cov_cov / cov_sigmas_1 / cov_sigmas_2
+                else:
+                    gt_values = gt_values.astype(np.int32)
+                    classifier = LinearSVC(C=0.01, class_weight="balanced")
+                    classifier.fit(inference_values[:, np.newaxis], gt_values)
+                    pred = classifier.predict(inference_values[:, np.newaxis])
+                    score_matrix[i, j] = np.mean(pred == gt_values)
+        sorted_score_matrix = np.sort(score_matrix, axis=0)
+        score = np.mean(sorted_score_matrix[-1, :] - 
+                        sorted_score_matrix[-2, :])
+
+        return {"SAP_metric": score,
+                "SAP_metric_detail": score_matrix}
+
+
+class MIGMetric(Metric):
+    """ Impementation of the metric in: 
+        Isolating Sources of Disentanglement in Variational Autoencoders
+        Part of the code is adapted from:
+        https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/mig.py
+    """
+    def __init__(self, metric_data, *args, **kwargs):
+        super(MIGMetric, self).__init__(*args, **kwargs)
+        self.metric_data = metric_data
+
+    def discretize(self, data, num_bins=20):
+        """ Adapted from:
+            https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/utils.py
+        """
+        discretized = np.zeros_like(data)
+        for i in range(data.shape[1]):
+            discretized[:, i] = np.digitize(
+                data[:, i],
+                np.histogram(data[:, i], num_bins)[1][:-1])
+        return discretized
+
+    def mutual_info(self, data1, data2):
+        """ Adapted from:
+            https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/utils.py
+        """
+        n1 = data1.shape[1]
+        n2 = data2.shape[1]
+        mi = np.zeros([n1, n2])
+        for i in range(n1):
+            for j in range(n2):
+                mi[i, j] = mutual_info_score(
+                    data2[:, j], data1[:, i])
+        return mi
+
+    def entropy(self, data):
+        """ Adapted from:
+            https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/utils.py
+        """
+        num_factors = data.shape[1]
+        entr = np.zeros(num_factors)
+        for i in range(num_factors):
+            entr[i] = mutual_info_score(data[:, i], data[:, i])
+        return entr
+
+    def evaluate(self, epoch_id, batch_id, global_id):
+        data_inference = self.model.inference_from(
+            self.metric_data["img_with_latent"]["img"])
+        data_gt_latents = self.metric_data["img_with_latent"]["latent_id"]
+
+        data_inference_discrete = self.discretize(data_inference)
+        mi = self.mutual_info(
+            data_inference_discrete, data_gt_latents)
+        entropy = self.entropy(data_gt_latents)
+        sorted_mi = np.sort(mi, axis=0)[::-1]
+        mig_score = np.mean(
+            np.divide(sorted_mi[0, :] - sorted_mi[1, :], entropy))
+
+        return {"MIG_metric": mig_score,
+                "MIG_metric_detail_mi": mi,
+                "MIG_metric_detail_entropy": entropy}
+
+
+class FStatMetric(Metric):
+    """ Impementation of the metric in: 
+        Learning Deep Disentangled Embeddings With the F-Statistic Loss
+        Part of the code is adapted from:
+        https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/modularity_explicitness.py
+    """
+    def __init__(self, metric_data, *args, **kwargs):
+        super(FStatMetric, self).__init__(*args, **kwargs)
+        self.metric_data = metric_data
+
+    def discretize(self, data, num_bins=20):
+        """ Adapted from:
+            https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/utils.py
+        """
+        discretized = np.zeros_like(data)
+        for i in range(data.shape[1]):
+            discretized[:, i] = np.digitize(
+                data[:, i],
+                np.histogram(data[:, i], num_bins)[1][:-1])
+        return discretized
+
+    def mutual_info(self, data1, data2):
+        """ Adapted from:
+            https://github.com/google-research/disentanglement_lib/blob/master/disentanglement_lib/evaluation/metrics/utils.py
+        """
+        n1 = data1.shape[1]
+        n2 = data2.shape[1]
+        mi = np.zeros([n1, n2])
+        for i in range(n1):
+            for j in range(n2):
+                mi[i, j] = mutual_info_score(
+                    data2[:, j], data1[:, i])
+        return mi
+
+    def evaluate(self, epoch_id, batch_id, global_id):
+        data_inference = self.model.inference_from(
+            self.metric_data["img_with_latent"]["img"])
+        data_gt_latent_ids = self.metric_data["img_with_latent"]["latent_id"]
+
+        data_inference_discrete = self.discretize(data_inference)
+        modu_mi = self.mutual_info(
+            data_inference_discrete, data_gt_latent_ids)
+        squared_modu_mi = np.square(modu_mi)
+        max_squared_modu_mi = np.max(squared_modu_mi, axis=1)
+        numerator = np.sum(squared_modu_mi, axis=1) - max_squared_modu_mi
+        denominator = max_squared_modu_mi * (data_gt_latent_ids.shape[1] - 1)
+        modu_delta = numerator / denominator
+        modu_score_detail = 1.0 - modu_delta
+        modu_score = np.mean(modu_score_detail)
+
+        expl_score_detail = np.zeros([data_gt_latent_ids.shape[1], 1])
+        for i in range(data_gt_latent_ids.shape[1]):
+            classifier = LogisticRegression()
+            y = data_gt_latent_ids[:, i]
+            classifier.fit(data_inference, y)
+            pred_brob = classifier.predict_proba(data_inference)
+            mlb = MultiLabelBinarizer()
+            roc = roc_auc_score(
+                mlb.fit_transform(np.expand_dims(y, 1)),
+                pred_brob)
+            expl_score_detail[i] = roc
+        expl_score = np.mean(expl_score_detail)
+
+        return {"FStat_modu_metric": modu_score,
+                "FStat_modu_metric_detail": modu_score_detail,
+                "FStat_modu_mi": modu_mi,
+                "FStat_expl_metric": expl_score,
+                "FStat_expl_metric_detail": expl_score_detail}
+
+
+class DCIMetric(Metric):
+    """ Impementation of the metric in: 
+        A FRAMEWORK FOR THE QUANTITATIVE EVALUATION OF DISENTANGLED 
+        REPRESENTATIONS
+        Part of the code is adapted from:
+        https://github.com/cianeastwood/qedr
+    """
+    def __init__(self, metric_data, regressor="Lasso", *args, **kwargs):
+        super(DCIMetric, self).__init__(*args, **kwargs)
+        self.data = metric_data["img_with_latent"]["img"]
+        self.latents = metric_data["img_with_latent"]["latent"]
+
+        self._regressor = regressor
+        if regressor == "Lasso":
+            self.regressor_class = Lasso
+            self.alpha = 0.02
+            # constant alpha for all models and targets
+            self.params = {"alpha": self.alpha} 
+            # weights
+            self.importances_attr = "coef_" 
+        elif regressor == "LassoCV":
+            self.regressor_class = LassoCV
+            # constant alpha for all models and targets
+            self.params = {} 
+            # weights
+            self.importances_attr = "coef_" 
+        elif regressor == "RandomForest":
+            self.regressor_class = RandomForestRegressor
+            # Create the parameter grid based on the results of random search 
+            max_depths = [4, 5, 2, 5, 5]
+            # Create the parameter grid based on the results of random search 
+            self.params = [{"max_depth": max_depth, "oob_score": True}
+                           for max_depth in max_depths]
+            self.importances_attr = "feature_importances_"
+        elif regressor == "RandomForestIBGAN":
+            # The parameters that IBGAN paper uses
+            self.regressor_class = RandomForestRegressor
+            # Create the parameter grid based on the results of random search 
+            max_depths = [4, 2, 4, 2, 2]
+            # Create the parameter grid based on the results of random search 
+            self.params = [{"max_depth": max_depth, "oob_score": True}
+                           for max_depth in max_depths]
+            self.importances_attr = "feature_importances_"
+        elif regressor == "RandomForestCV":
+            self.regressor_class = GridSearchCV
+            # Create the parameter grid based on the results of random search 
+            param_grid = {"max_depth": [i for i in range(2, 16)]}
+            self.params = {
+                "estimator": RandomForestRegressor(),
+                "param_grid": param_grid,
+                "cv": 3,
+                "n_jobs": -1,
+                "verbose": 0
+            }
+            self.importances_attr = "feature_importances_"
+        elif "RandomForestEnum" in regressor:
+            self.regressor_class = RandomForestRegressor
+            # Create the parameter grid based on the results of random search 
+            self.params = {
+                "max_depth": int(regressor[len("RandomForestEnum"):]),
+                "oob_score": True
+            }
+            self.importances_attr = "feature_importances_"
+        else:
+            raise NotImplementedError()
+
+        self.TINY = 1e-12
+
+    def normalize(self, X):
+        mean = np.mean(X, 0) # training set
+        stddev = np.std(X, 0) # training set
+        #print('mean', mean)
+        #print('std', stddev)
+        return (X - mean) / stddev
+
+    def norm_entropy(self, p):
+        '''p: probabilities '''
+        n = p.shape[0]
+        return - p.dot(np.log(p + self.TINY) / np.log(n + self.TINY))
+
+    def entropic_scores(self, r):
+        '''r: relative importances '''
+        r = np.abs(r)
+        ps = r / np.sum(r, axis=0) # 'probabilities'
+        hs = [1 - self.norm_entropy(p) for p in ps.T]
+        return hs
+
+    def evaluate(self, epoch_id, batch_id, global_id):
+        codes = self.model.inference_from(self.data)
+        latents = self.latents
+        codes = self.normalize(codes)
+        latents = self.normalize(latents)
+        R = []
+
+        for j in range(self.latents.shape[-1]):
+            if isinstance(self.params, dict):
+              regressor = self.regressor_class(**self.params)
+            elif isinstance(self.params, list):
+              regressor = self.regressor_class(**self.params[j])
+            regressor.fit(codes, latents[:, j])
+
+            # extract relative importance of each code variable in 
+            # predicting the latent z_j
+            if self._regressor == "RandomForestCV":
+                best_rf = regressor.best_estimator_
+                r = getattr(best_rf, self.importances_attr)[:, None]
+            else:
+                r = getattr(regressor, self.importances_attr)[:, None]
+
+            R.append(np.abs(r))
+
+        R = np.hstack(R) #columnwise, predictions of each z
+
+        # disentanglement
+        disent_scores = self.entropic_scores(R.T)
+        # relative importance of each code variable
+        c_rel_importance = np.sum(R, 1) / np.sum(R) 
+        disent_w_avg = np.sum(np.array(disent_scores) * c_rel_importance)
+
+        # completeness
+        complete_scores = self.entropic_scores(R)
+        complete_avg = np.mean(complete_scores)
+
+        return {
+            "DCI_{}_disent_metric_detail".format(self._regressor): \
+                disent_scores,
+            "DCI_{}_disent_metric".format(self._regressor): disent_w_avg,
+            "DCI_{}_complete_metric_detail".format(self._regressor): \
+                complete_scores,
+            "DCI_{}_complete_metric".format(self._regressor): complete_avg,
+            "DCI_{}_metric_detail".format(self._regressor): R
+            }

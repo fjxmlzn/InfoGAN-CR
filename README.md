@@ -11,6 +11,10 @@
 ---
 This repo contains the codes for generating datasets and reproducing results in paper. The codes were tested under Python 2.7.5, TensorFlow 1.4.0.
 
+## Metrics
+This repo contains our implementation of [FactorVAE metric](https://arxiv.org/abs/1802.05983), [BetaVAE metric](https://openreview.net/forum?id=Sy2fzU9gl), [SAP](https://arxiv.org/abs/1711.00848), [MIG](https://arxiv.org/abs/1802.04942), [Explicitness](https://arxiv.org/abs/1802.05312), [Modularity](https://arxiv.org/abs/1802.05312), [DCI](https://openreview.net/forum?id=By-7dz-AZ&noteId=By-7dz-AZ), and [dHSIC](http://papers.nips.cc/paper/7850-information-constraints-on-auto-encoding-variational-bayes). It also includes Inception Score, mode KL, and classifier confidence for dSprites discussed in our paper. 
+The metrics are implemented in `metric.py`. You can choose to calculate any set of metrics during training for plotting the training curve, or calculate them only on the final trained model to save time. See below for the examples.
+
 ## Preparing datasets
 
 ### 3D Teapot
@@ -60,9 +64,14 @@ Copy dSprites data files to `data/dSprites`.
 
 ```
 cd gan
-python train_DSpritesInceptionScore.py # train network for evaluating inception score on dSrpites dataset
+python train_DSpritesInceptionScore.py # train the network for evaluating inception score on dSrpites dataset
 cd ..
 python main.py
+```
+Compute all the metrics for the final trained model:
+
+```
+python main_final_metrics.py
 ```
 
 ### FactorVAE, dSprites dataset
@@ -73,9 +82,14 @@ Copy dSprites data files to `data/dSprites`.
 
 ```
 cd gan
-python train_DSpritesInceptionScore.py # train network for evaluating inception score on dSrpites dataset
+python train_DSpritesInceptionScore.py # train the network for evaluating inception score on dSrpites dataset
 cd ..
 python main.py
+```
+Compute all the metrics for the final trained model:
+
+```
+python main_final_metrics.py
 ```
 
 ### InfoGAN-CR, 3D teapot
@@ -87,6 +101,11 @@ Copy 3D Teapot data files to `data/3Dpots`.
 ```
 python main.py
 ```
+Compute all the metrics for the final trained model:
+
+```
+python main_final_metrics.py
+```
 
 ### FactorVAE, 3D teapot
 ```
@@ -96,6 +115,11 @@ Copy 3D Teapot data files to `data/3Dpots`.
 
 ```
 python main.py
+```
+Compute all the metrics for the final trained model:
+
+```
+python main_final_metrics.py
 ```
 
 ### InfoGAN-CR, CelebA
@@ -107,6 +131,9 @@ Copy CelebA data files to `data/celeba`.
 ```
 python main.py
 ```
+
+### Notes on metric calculation
+You can easily change the metrics that you want to calculate throughout training by modifying `metric_callbacks` list in `gan_task.py` or `factorvae_task.py`. You can also easily change the metrics that you want to calculate for the final trained model by modifying the metrics in `gan_task_final_metrics.py` or `factorvae_task_final_metrics.py`.
 
 ## Pre-trained models
 ### InfoGAN-CR, CelebA
