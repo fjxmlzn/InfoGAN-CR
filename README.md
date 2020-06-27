@@ -1,12 +1,16 @@
-# InfoGAN-CR: Disentangling Generative Adversarial Networks with Contrastive Regularizers
+# InfoGAN-CR and ModelCentrality: Self-supervised Model Training and Selection for Disentangling GANs
+
+Previous title:
+**InfoGAN-CR: Disentangling Generative Adversarial Networks with Contrastive Regularizers**
 
 **[[paper (arXiv)](https://arxiv.org/abs/1906.06034)]**
+**[[paper (ICML)]()]**
 **[[code](https://github.com/fjxmlzn/InfoGAN-CR)]**
 
 
 **Authors:** [Zinan Lin](http://www.andrew.cmu.edu/user/zinanl/), [Kiran Koshy Thekumparampil](https://scholar.google.com/citations?user=0gJQCIgAAAAJ&hl=en), [Giulia Fanti](https://www.andrew.cmu.edu/user/gfanti/), [Sewoong Oh](https://homes.cs.washington.edu/~sewoong/)
 
-**Abstract:** Training disentangled representations with generative adversarial networks (GANs) remains challenging, with leading implementations failing to achieve comparable performance to Variational Autoencoder (VAE)-based methods. After beta-VAE and FactorVAE discovered that regularizing the total correlation of the latent vectors promotes disentanglement, numerous VAE-based methods emerged. Such a discovery has yet to be made for GANs, and reported disentanglement scores of GAN-based methods are significantly inferior to VAE-based methods on benchmark datasets. To this end, we propose a novel regularizer that achieves higher disentanglement scores than state-of-the-art VAE- and GAN-based approaches. The proposed contrastive regularizer is inspired by a natural notion of disentanglement: latent traversal. Latent traversal refers to generating images by varying one latent code while fixing the rest. We turn this intuition into a regularizer by adding a discriminator that detects how the latent codes are coupled together, in paired examples. Numerical experiments show that this approach improves upon competing state-of-the-art approaches on benchmark datasets. 
+**Abstract:** Disentangled generative models map a latent code vector to a target space, while enforcing that a subset of the learned latent codes are interpretable and associated with distinct properties of the target distribution. Recent advances have been dominated by Variational AutoEncoder (VAE)-based methods, while training disentangled generative adversarial networks (GANs) remains challenging. In this work, we show that the dominant challenges facing disentangled GANs can be mitigated through the use of self-supervision. We make two main contributions: first, we design a novel approach for training disentangled GANs with self-supervision. We propose contrastive regularizer, which is inspired by a natural notion of disentanglement: latent traversal. This achieves higher disentanglement scores than state-of-the-art VAE- and GAN-based approaches. Second, we propose an unsupervised model selection scheme called ModelCentrality, which uses generated synthetic samples to compute the medoid (multi-dimensional generalization of median) of a collection of models. Perhaps surprisingly, this unsupervised ModelCentrality is able to select a model that outperforms those trained with existing supervised hyper-parameter selection techniques. Combining contrastive regularization with ModelCentrality, we obtain state-of-the-art disentanglement scores by a substantial margin, without requiring supervised hyper-parameter selection.
 
 ---
 This repo contains the codes for generating datasets and reproducing results in paper. The codes were tested under Python 2.7.5, TensorFlow 1.4.0.
@@ -136,6 +140,9 @@ python main.py
 You can easily change the metrics that you want to calculate throughout training by modifying `metric_callbacks` list in `gan_task.py` or `factorvae_task.py`. You can also easily change the metrics that you want to calculate for the final trained model by modifying the metrics in `gan_task_final_metrics.py` or `factorvae_task_final_metrics.py`.
 
 ## Pre-trained models
+### InfoGAN and InfoGAN-CR, dSprites
+The checkpoints of InfoGAN (modified) and InfoGAN-CR for producing the results in Table 1 can be found [here](https://drive.google.com/file/d/1wBuSqclUlFiJTVDDodcuZpjD87IZDHoy/view?usp=sharing). This includes 50 runs of InfoGAN (modified) (in `results/*/checkpoint/global_id-287999/model-287999`) and 50 runs of InfoGAN-CR (in `results/*/checkpoint/model-322559`).
+
 ### InfoGAN-CR, CelebA
 ```
 cd InfoGAN-CR_CelebA
@@ -153,5 +160,7 @@ This code will generate latent traversal images in `results/cr_coe_increase-1.0,
 ![Figure1](results/Figure1.png)
 
 ![Table1](results/Table1.png)
+
+![Table3](results/Table3.png)
 
 The detailed explanation of the idea, architectures, hyperparameters, metrics, and experimental settings are given in the paper.
