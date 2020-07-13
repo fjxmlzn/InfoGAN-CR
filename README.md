@@ -55,7 +55,7 @@ Download `img_align_celeba.zip` from [https://www.kaggle.com/jessicali9530/celeb
 ### dSprites
 Download `dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz` from [https://github.com/deepmind/dsprites-dataset](https://github.com/deepmind/dsprites-dataset) and put it in the `data` folder in code (see below).
 
-## Train models with InfoGAN-CR and FactorVAE
+## Train InfoGAN-CR and FactorVAE
 The codes are based on [GPUTaskScheduler](https://github.com/fjxmlzn/GPUTaskScheduler) library, which helps you automatically schedule jobs among GPU nodes. Please install it first. You may need to change GPU configurations according to the devices you have. The configurations are set in `config.py` in each directory. Please refer to [GPUTaskScheduler's GitHub page](https://github.com/fjxmlzn/GPUTaskScheduler) for details of how to make proper configurations.
 
 > You can also run these codes without GPUTaskScheduler. Just run `python infogan_cr.py` or `python factorVAE.py` in `gan` subfolders.
@@ -139,7 +139,7 @@ python main.py
 ### Notes on metric calculation
 You can easily change the metrics that you want to calculate throughout training by modifying `metric_callbacks` list in `gan_task.py` or `factorvae_task.py`. You can also easily change the metrics that you want to calculate for the final trained model by modifying the metrics in `gan_task_final_metrics.py` or `factorvae_task_final_metrics.py`.
 
-## Model Selection with ModelCentrality
+## Select models with ModelCentrality
 Assuming that you have already trained the models and evaluated the metrics with the steps in the previous section.
 
 ### InfoGAN-CR, dSprites dataset
@@ -159,7 +159,7 @@ Compute cross-evaluation FactorVAE metrics:
 python main_mc_cross_evaluation.py
 ```
 
-Model selection with ModelCentrality (the codes prints the models in descending order according to ModelCentrality score):
+Select models with ModelCentrality (the code prints the models in descending order according to ModelCentrality score):
 
 ```
 python main_mc.py
@@ -182,7 +182,7 @@ Compute cross-evaluation FactorVAE metrics:
 python main_mc_cross_evaluation.py
 ```
 
-Model selection with ModelCentrality (the codes prints the models in descending order according to ModelCentrality score):
+Select models with ModelCentrality (the code prints the models in descending order according to ModelCentrality score):
 
 ```
 python main_mc.py
