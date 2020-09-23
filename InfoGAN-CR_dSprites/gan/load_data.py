@@ -7,7 +7,8 @@ def load_dSprites(path):
     # https://github.com/deepmind/dsprites-dataset/blob/master/dsprites_reloading_example.ipynb
     dataset_zip = np.load(
         os.path.join(
-            path, "dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz"))
+            path, "dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz"),
+        allow_pickle=True)
     imgs = dataset_zip['imgs']
     latent_values = dataset_zip['latents_values']
     #latents_classes = dataset_zip['latents_classes']
