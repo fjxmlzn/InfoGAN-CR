@@ -4,7 +4,7 @@ Previous title:
 **InfoGAN-CR: Disentangling Generative Adversarial Networks with Contrastive Regularizers**
 
 **[[paper (arXiv)](https://arxiv.org/abs/1906.06034)]**
-**[[paper (ICML)]()]**
+**[[paper (ICML)](https://proceedings.icml.cc/static/paper_files/icml/2020/4410-Paper.pdf)]**
 **[[code](https://github.com/fjxmlzn/InfoGAN-CR)]**
 
 
